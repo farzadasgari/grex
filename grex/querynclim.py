@@ -7,7 +7,7 @@ import time
 BASE_URL = "https://www.ncei.noaa.gov/data/nclimgrid-daily/access/grids/"
 YEARS = range(1951, 2026)
 MONTHS = range(1, 13)
-OUT_DIR = Path("../dataset/nClimGrid")
+OUT_DIR = Path("../dataset/nclimgrid")
 MAX_WORKERS = 8
 TIMEOUT = 60
 DELAY = 0.1
