@@ -35,3 +35,11 @@ warm_da.attrs['description'] = ('Three consecutive months with the highest mean 
                                 '(climatological warm season). Ocean masked out.')
 warm_da.attrs['land_mask_threshold'] = 'annual_range > 9.0°C'
 warm_da.to_netcdf("../dataset/warm_seasons_ca.nc")
+
+print("\nMost common warm seasons over land:")
+unique, counts = np.unique(warm_season[land_mask.values], axis=0, return_counts=True)
+for months, count in zip(unique[np.argsort(-counts)], np.sort(counts)[::-1]):
+    if not np.isnan(months).any():
+        print(f"  {int(months[0]):02d}-{int(months[1]):02d}-{int(months[2]):02d} : {count} cells")
+        # 06 - 07 - 08: 11672 cells → Jun–Jul–Aug
+        # 07 - 08 - 09: 11373 cells → Jul–Aug–Sep
