@@ -27,10 +27,14 @@ for nc_file in sorted(src_dir.glob("ca-*.nc")):
 
     precip_monthly = ds_daily['prcp'].sum(dim='time')
     tmean_monthly = tmean_daily.mean(dim='time')
+    tmax_monthly = ds_daily['tmax'].mean(dim='time')
+    tmin_monthly = ds_daily['tmin'].mean(dim='time')
 
     monthly_slice = xr.Dataset({
         'prcp': precip_monthly,
-        'tmean': tmean_monthly
+        'tmean': tmean_monthly,
+        'tmax': tmax_monthly,
+        'tmin': tmin_monthly,
     })
     monthly_slice = monthly_slice.expand_dims(time=[pd.to_datetime(f"{year}-{month}-01")])
     monthly_list.append(monthly_slice)
