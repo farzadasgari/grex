@@ -18,3 +18,7 @@ cell_warm = warm_da.sel(lat=selected_lat, lon=selected_lon)
 window_months = cell_warm.values.astype(int)
 print(f"Random cell at lat={selected_lat:.2f}, lon={selected_lon:.2f}")
 print(f"Warm window: {window_months} (months {window_months[0]}-{window_months[1]}-{window_months[2]})")
+
+cell_p = monthly_ds['prcp'].sel(lat=selected_lat, lon=selected_lon, method='nearest')
+cell_t = monthly_ds['tmean'].sel(lat=selected_lat, lon=selected_lon, method='nearest')
+years = np.unique(cell_p['time.year'].values)
