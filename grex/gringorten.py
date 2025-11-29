@@ -43,8 +43,8 @@ n = len(years)
 if n < 10:
     raise ValueError("Too few valid years — choose a different cell.")
 
-rank_p = rankdata(warm_p, method='average')
-rank_t = rankdata(warm_t, method='average')
+rank_p = rankdata(warm_p, method='ordinal')
+rank_t = rankdata(warm_t, method='ordinal')
 
 g1 = (rank_p - 0.44) / (n + 0.12)
 g2 = (rank_t - 0.44) / (n + 0.12)
