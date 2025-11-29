@@ -46,3 +46,6 @@ if n < 10:
 
 rank_p = rankdata(warm_p, method='average')
 rank_t = rankdata(warm_t, method='average')
+
+g1 = (rank_p - 0.44) / (n + 0.12)
+g2 = (rank_t - 0.44) / (n + 0.12)
