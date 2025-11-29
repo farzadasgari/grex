@@ -22,3 +22,14 @@ print(f"Warm window: {window_months} (months {window_months[0]}-{window_months[1
 cell_p = monthly_ds['prcp'].sel(lat=selected_lat, lon=selected_lon, method='nearest')
 cell_t = monthly_ds['tmean'].sel(lat=selected_lat, lon=selected_lon, method='nearest')
 years = np.unique(cell_p['time.year'].values)
+
+warm_p = np.full(len(years), np.nan)
+warm_t = np.full(len(years), np.nan)
+for y_idx, year in enumerate(years):
+    year_data_p = cell_p.sel(time=str(year))
+    year_data_t = cell_t.sel(time=str(year))
+    if len(year_data_p.time) < 12: continue
+    month_mask = year_data_p['time.month'].isin(window_months)
+    if month_mask.sum() == 3:
+        warm_p[y_idx] = year_data_p.where(month_mask, drop=True).mean('time').values
+        warm_t[y_idx] = year_data_t.where(month_mask, drop=True).mean('time').values
