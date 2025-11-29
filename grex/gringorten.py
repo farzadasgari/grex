@@ -49,4 +49,8 @@ rank_t = rankdata(warm_t, method='average')
 g1 = (rank_p - 0.44) / (n + 0.12)
 g2 = (rank_t - 0.44) / (n + 0.12)
 
+eps = 1e-6
+g1 = np.clip(g1, eps, 1 - eps)
+g2 = np.clip(g2, eps, 1 - eps)
+
 x = g1 / g2
