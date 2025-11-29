@@ -1,5 +1,6 @@
 import xarray as xr
 import numpy as np
+from scipy.stats import rankdata
 
 monthly_ds = xr.open_dataset("../dataset/monthly_ca_1951_2025.nc")
 warm_da = xr.open_dataarray("../dataset/warm_seasons_ca.nc")
@@ -42,3 +43,6 @@ n = len(years)
 
 if n < 10:
     raise "Too few valid years — rerun for new random cell."
+
+rank_p = rankdata(warm_p, method='average')
+rank_t = rankdata(warm_t, method='average')
