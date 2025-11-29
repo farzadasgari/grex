@@ -39,3 +39,6 @@ warm_p = warm_p[valid_mask]
 warm_t = warm_t[valid_mask]
 years = years[valid_mask]
 n = len(years)
+
+if n < 10:
+    raise "Too few valid years — rerun for new random cell."
