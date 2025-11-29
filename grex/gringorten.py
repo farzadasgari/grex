@@ -33,3 +33,9 @@ for y_idx, year in enumerate(years):
     if month_mask.sum() == 3:
         warm_p[y_idx] = year_data_p.where(month_mask, drop=True).mean('time').values
         warm_t[y_idx] = year_data_t.where(month_mask, drop=True).mean('time').values
+
+valid_mask = ~np.isnan(warm_p)
+warm_p = warm_p[valid_mask]
+warm_t = warm_t[valid_mask]
+years = years[valid_mask]
+n = len(years)
