@@ -13,3 +13,8 @@ if len(lat_idxs) == 0:
 rnd_idx = np.random.choice(len(lat_idxs))
 selected_lat = warm_da.lat[lat_idxs[rnd_idx]].values
 selected_lon = warm_da.lon[lon_idxs[rnd_idx]].values
+
+cell_warm = warm_da.sel(lat=selected_lat, lon=selected_lon)
+window_months = cell_warm.values.astype(int)
+print(f"Random cell at lat={selected_lat:.2f}, lon={selected_lon:.2f}")
+print(f"Warm window: {window_months} (months {window_months[0]}-{window_months[1]}-{window_months[2]})")
