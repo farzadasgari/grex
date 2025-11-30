@@ -25,3 +25,6 @@ for year in sdhi_da.year.values:
         pct = (below.sum().item() / year_land_cells) * 100 if year_land_cells > 0 else np.nan
         row[f'pct_{level}'] = pct
     metrics.append(row)
+
+metrics_df = pd.DataFrame(metrics)
+metrics_df.to_csv("../dataset/sdhi_ca_metrics.csv", index=False)
