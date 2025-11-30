@@ -14,6 +14,7 @@ DELAY = 0.1
 
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 
+
 def download_file(year, month):
     fname = f"ncdd-{year}{month:02d}-grd-scaled.nc"
     url = f"{BASE_URL}/{year}/{fname}"
@@ -35,12 +36,13 @@ def download_file(year, month):
         print(f"Error downloading {fname}: {e}")
         return fname, False
 
+
 tasks = [(y, m) for y in YEARS for m in MONTHS]
 
 results = []
 with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
     futures = {executor.submit(download_file, y, m): (y, m) for y, m in tasks}
-    
+
     for future in tqdm(as_completed(futures), total=len(tasks), desc="Downloading"):
         fname, success = future.result()
         results.append((fname, success))

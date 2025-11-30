@@ -20,4 +20,3 @@ for nc_file in src_dir.glob("*.nc"):
     out_name = f"ca-{nc_file.name}"
     out_path = dst_dir / out_name
     ds_ca.to_netcdf(out_path)
-

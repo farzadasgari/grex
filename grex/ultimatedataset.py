@@ -3,6 +3,7 @@ import numpy as np
 from scipy.stats import rankdata, norm
 from tqdm import tqdm
 import warnings
+
 warnings.filterwarnings("ignore")
 
 monthly_ds = xr.open_dataset("../dataset/monthly_ca_1951_2025.nc")
@@ -43,7 +44,11 @@ for c_idx in tqdm(range(n_cells), desc="Cells"):
         mask = np.isin(months, window)
 
         if mask.sum() != 3:
-            P.append(np.nan); Tmean.append(np.nan); Tmax.append(np.nan); Tmin.append(np.nan); PET.append(np.nan)
+            P.append(np.nan);
+            Tmean.append(np.nan);
+            Tmax.append(np.nan);
+            Tmin.append(np.nan);
+            PET.append(np.nan)
             continue
 
         p_vals = ydata['prcp'].values[mask]
@@ -56,31 +61,38 @@ for c_idx in tqdm(range(n_cells), desc="Cells"):
         Tmax.append(tx_vals.mean())
         Tmin.append(tn_vals.mean())
 
-        doy = [np.mean([31*(m-1) + 15 for m in window])]
+        doy = [np.mean([31 * (m - 1) + 15 for m in window])]
         from math import sin, radians, pi
+
         lat_rad = radians(lat)
         pet_daily = []
         for m in window:
-            sol_dec = 0.409 * sin(2*pi*(doy[0])/365 - 1.39)
+            sol_dec = 0.409 * sin(2 * pi * (doy[0]) / 365 - 1.39)
             sha = np.arccos(-np.tan(lat_rad) * np.tan(sol_dec))
-            ra = 15.39 * (24/pi) * sha * (0.0835 * sin(2*pi*doy[0]/365 - 1.39) + 0.0007)
+            ra = 15.39 * (24 / pi) * sha * (0.0835 * sin(2 * pi * doy[0] / 365 - 1.39) + 0.0007)
             trange = tx_vals[window.tolist().index(m)] - tn_vals[window.tolist().index(m)]
             pet_d = 0.0023 * ra * (t_vals[window.tolist().index(m)] + 17.8) * np.sqrt(max(trange, 0))
             pet_daily.append(pet_d)
         PET.append(np.mean(pet_daily) * 30.4)
 
-    P = np.array(P); Tmean = np.array(Tmean); Tmax = np.array(Tmax); Tmin = np.array(Tmin); PET = np.array(PET)
+    P = np.array(P);
+    Tmean = np.array(Tmean);
+    Tmax = np.array(Tmax);
+    Tmin = np.array(Tmin);
+    PET = np.array(PET)
     valid = ~(np.isnan(P) | np.isnan(Tmean))
 
     if valid.sum() < 10:
         continue
 
+
     def std_index(arr):
         ranks = rankdata(arr[valid], method='average')
         n = ranks.size
         p = (ranks - 0.44) / (n + 0.12)
-        p = np.clip(p, 1e-6, 1-1e-6)
+        p = np.clip(p, 1e-6, 1 - 1e-6)
         return norm.ppf(p)
+
 
     spi = std_index(P)
     sti = std_index(Tmean)
@@ -90,9 +102,9 @@ for c_idx in tqdm(range(n_cells), desc="Cells"):
     g2_t = (rankdata(Tmean[valid], 'average') - 0.44) / (valid.sum() + 0.12)
     g1_pe = (rankdata((P - PET)[valid], 'average') - 0.44) / (valid.sum() + 0.12)
 
-    g1_p = np.clip(g1_p, 1e-6, 1-1e-6)
-    g2_t = np.clip(g2_t, 1e-6, 1-1e-6)
-    g1_pe = np.clip(g1_pe, 1e-6, 1-1e-6)
+    g1_p = np.clip(g1_p, 1e-6, 1 - 1e-6)
+    g2_t = np.clip(g2_t, 1e-6, 1 - 1e-6)
+    g1_pe = np.clip(g1_pe, 1e-6, 1 - 1e-6)
 
     x1 = g1_p / g2_t
     x2 = g1_pe / g2_t
