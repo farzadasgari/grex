@@ -52,3 +52,14 @@ def joint_prob_dry_hot(spi_vals, sti_vals):
     p_valid = np.clip(p_valid, 1e-8, 1 - 1e-8)
     p[valid] = p_valid
     return p
+
+
+def scei_from_spi_sti(spi_series, sti_series):
+    p = joint_prob_dry_hot(spi_series, sti_series)
+    g = gringorten_cdf(p)
+    scei = np.full_like(p, np.nan)
+    valid = ~np.isnan(g)
+    if valid.sum() < 3:
+        return scei
+    scei[valid] = norm.ppf(g[valid])
+    return scei
