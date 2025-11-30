@@ -28,3 +28,17 @@ for c_idx in tqdm(range(n_cells), desc="Processing cells"):
     f_x = np.clip(f_x, 1e-6, 1 - 1e-6)
     sdhi_valid = norm.ppf(f_x)
     sdhi_arr[valid_mask, sel_lat_idx, sel_lon_idx] = sdhi_valid
+
+sdhi_da = xr.DataArray(
+    sdhi_arr,
+    dims=['year', 'lat', 'lon'],
+    coords={
+        'year': years,
+        'lat': x_da.lat,
+        'lon': x_da.lon
+    },
+    name='sdhi'
+)
+
+sdhi_da.attrs['description'] = 'Standardized Dry and Hot Index (SDHI) per year per cell (warm season)'
+sdhi_da.to_netcdf("../dataset/sdhi_ca_1951_2025.nc")
