@@ -136,4 +136,4 @@ ds_final = xr.Dataset(
 ds_final.attrs['title'] = 'California Warm-Season Compound Climate Extremes 1951-2025'
 ds_final.attrs['source'] = 'nClimGrid + Hargreaves PET + Gringorten ranking'
 
-ds_final.to_netcdf("../dataset/ca_climate_extremes_1951_2025_full.nc")
+ds_final.to_netcdf("../dataset/ca_sdhi_1951_2025.nc")

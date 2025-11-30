@@ -148,5 +148,5 @@ ds_scei.attrs["description"] = (
     "Warm-season precipitation and temperature, SPI, STI, "
     "and Standardized Compound Event Indicator (SCEI) "
 )
-out_path = "../dataset/ca_scei_hao2019_1951_2025.nc"
+out_path = "../dataset/ca_scei_1951_2025.nc"
 ds_scei.to_netcdf(out_path)
