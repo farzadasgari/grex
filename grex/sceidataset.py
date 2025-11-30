@@ -19,3 +19,11 @@ def gringorten_cdf(arr):
     g = np.clip(g, 1e-6, 1 - 1e-6)
     out[valid] = g
     return out
+
+
+def standardized_index_from_series(arr):
+    g = gringorten_cdf(arr)
+    out = np.full_like(arr, np.nan)
+    valid = ~np.isnan(g)
+    out[valid] = norm.ppf(g[valid])
+    return out
