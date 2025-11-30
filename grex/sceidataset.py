@@ -65,7 +65,6 @@ def scei_from_spi_sti(spi_series, sti_series):
     return scei
 
 
-
 monthly_ds = xr.open_dataset("../dataset/monthly_ca_1951_2025.nc")
 warm_da = xr.open_dataarray("../dataset/warm_seasons_ca.nc")
 
@@ -135,3 +134,19 @@ for c_idx in tqdm(range(len(lat_idxs)), desc="Cells"):
         data_dict["SPI"][y_idx, i_lat, i_lon] = SPI[y_idx]
         data_dict["STI"][y_idx, i_lat, i_lon] = STI[y_idx]
         data_dict["SCEI"][y_idx, i_lat, i_lon] = SCEI[y_idx]
+
+ds_scei = xr.Dataset(
+    {name: (["year", "lat", "lon"], arr) for name, arr in data_dict.items()},
+    coords={
+        "year": years,
+        "lat": lats,
+        "lon": lons,
+    }
+)
+
+ds_scei.attrs["description"] = (
+    "Warm-season precipitation and temperature, SPI, STI, "
+    "and Standardized Compound Event Indicator (SCEI) "
+)
+out_path = "../dataset/ca_scei_hao2019_1951_2025.nc"
+ds_scei.to_netcdf(out_path)
