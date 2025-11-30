@@ -75,10 +75,10 @@ for c_idx in tqdm(range(n_cells), desc="Cells"):
             pet_daily.append(pet_d)
         PET.append(np.mean(pet_daily) * 30.4)
 
-    P = np.array(P);
-    Tmean = np.array(Tmean);
-    Tmax = np.array(Tmax);
-    Tmin = np.array(Tmin);
+    P = np.array(P)
+    Tmean = np.array(Tmean)
+    Tmax = np.array(Tmax)
+    Tmin = np.array(Tmin)
     PET = np.array(PET)
     valid = ~(np.isnan(P) | np.isnan(Tmean))
 
