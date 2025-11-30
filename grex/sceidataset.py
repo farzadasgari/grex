@@ -63,3 +63,23 @@ def scei_from_spi_sti(spi_series, sti_series):
         return scei
     scei[valid] = norm.ppf(g[valid])
     return scei
+
+
+
+monthly_ds = xr.open_dataset("../dataset/monthly_ca_1951_2025.nc")
+warm_da = xr.open_dataarray("../dataset/warm_seasons_ca.nc")
+
+mask = ~np.isnan(warm_da).any(dim="window")
+lat_idxs, lon_idxs = np.where(mask)
+
+lats = monthly_ds.lat.values
+lons = monthly_ds.lon.values
+
+years = np.arange(1951, 2026)
+n_years = len(years)
+
+vars_to_save = ["P_warm", "Tmean_warm", "SPI", "STI", "SCEI"]
+data_dict = {
+    v: np.full((n_years, len(lats), len(lons)), np.nan, dtype=float)
+    for v in vars_to_save
+}
