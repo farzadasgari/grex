@@ -2,3 +2,4 @@ venv/
 dataset/
 config.py
 .idea/
+plots/
