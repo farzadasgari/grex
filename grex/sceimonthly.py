@@ -1,125 +1,109 @@
 import xarray as xr
 import numpy as np
-from scipy.stats import rankdata, norm, multivariate_normal
+from scipy.stats import norm, rankdata, multivariate_normal
+from joblib import Parallel, delayed
 from tqdm import tqdm
 import warnings
-
 warnings.filterwarnings("ignore")
 
-def gringorten_cdf(arr):
-    arr = np.asarray(arr, dtype=float)
-    valid = ~np.isnan(arr)
-    if valid.sum() < 3:
-        return np.full_like(arr, np.nan)
-    ranks = rankdata(arr[valid], method="average")
+def standardize(series):
+    valid = ~np.isnan(series)
+    if valid.sum() < 10: return np.full_like(series, np.nan)
+    ranks = rankdata(series[valid], method='average')
     n = valid.sum()
     p = (ranks - 0.44) / (n + 0.12)
-    p = np.clip(p, 1e-6, 1 - 1e-6)
-    out = np.full_like(arr, np.nan)
-    out[valid] = p
+    p = np.clip(p, 1e-8, 1 - 1e-8)
+    out = np.full_like(series, np.nan)
+    out[valid] = norm.ppf(p)
     return out
 
-def standardized_index(arr):
-    p = gringorten_cdf(arr)
-    out = np.full_like(p, np.nan)
-    valid = ~np.isnan(p)
-    if valid.sum() == 0:
-        return out
-    out[valid] = norm.ppf(p[valid])
-    return out
-
-def joint_prob_dry_and_hot(spi_vals, sti_vals):
-    spi = np.asarray(spi_vals, dtype=float)
-    sti = np.asarray(sti_vals, dtype=float)
+def compute_scei_for_month(prcp_series, temp_series):
+    spi = standardize(prcp_series)
+    sti = standardize(temp_series)
     valid = ~(np.isnan(spi) | np.isnan(sti))
-    if valid.sum() < 10: return np.full_like(spi, np.nan)
+    if valid.sum() < 10: return np.full_like(prcp_series, np.nan)
     
     u1 = spi[valid]
     u2 = sti[valid]
-
-    rho = np.corrcoef(u1, u2)[0, 1]
+    
+    rho = np.corrcoef(u1, u2)[0,1]
+    if not np.isfinite(rho): rho = 0.0
     rho = np.clip(rho, -0.999, 0.999)
     cov = [[1, rho], [rho, 1]]
-    mvn = multivariate_normal(mean=[0, 0], cov=cov)
-
-    p_joint_cdf = np.array([mvn.cdf([u1[i], u2[i]]) for i in range(len(u1))])
-    p_dry = norm.cdf(u1)
-    p_dry_and_hot = p_dry - p_joint_cdf
-
+    try:
+        mvn = multivariate_normal([0, 0], cov, allow_singular=True)
+        joint_cdf = np.array([mvn.cdf([a, b]) for a, b in zip(u1, u2)])
+    except: joint_cdf = norm.cdf(u1) * norm.cdf(u2)
+    
+    p_dry_and_hot = norm.cdf(u1) - joint_cdf
     p_dry_and_hot = np.clip(p_dry_and_hot, 1e-8, 1 - 1e-8)
-
-    result = np.full_like(spi, np.nan)
-    result[valid] = p_dry_and_hot
+    ranks = rankdata(p_dry_and_hot, method='average')
+    n = len(p_dry_and_hot)
+    p_final = (ranks - 0.44) / (n + 0.12)
+    scei = norm.ppf(p_final)
+    
+    result = np.full_like(prcp_series, np.nan)
+    result[valid] = scei
     return result
 
-def scei_from_prob(p):
-    g = gringorten_cdf(p)
-    out = np.full_like(g, np.nan)
-    valid = ~np.isnan(g)
-    if valid.sum() < 3: return out
-    out[valid] = norm.ppf(g[valid])
-    return out
-
-monthly_ds = xr.open_dataset("../dataset/monthly_ca_1951_2025.nc")
-warm_da = xr.open_dataarray("../dataset/warm_seasons_ca.nc")
-
-mask = ~np.isnan(warm_da).any(dim='window')
-lat_idxs, lon_idxs = np.where(mask)
-n_cells = len(lat_idxs)
-
-lats = monthly_ds.lat.values
-lons = monthly_ds.lon.values
-years = np.arange(1951, 2026)
-months = np.arange(1, 13)
-
-vars_to_save = ['prcp', 'tmean', 'spi', 'sti', 'scei']
-data_dict = {
-    v: np.full((len(years), len(months), len(lats), len(lons)), np.nan)
-    for v in vars_to_save
-}
-
-for c_idx in tqdm(range(n_cells), desc="Grid Cells", unit="cell"):
-    i_lat = lat_idxs[c_idx]
-    i_lon = lon_idxs[c_idx]
-
-    cell = monthly_ds[['prcp', 'tmean']].sel(lat=lats[i_lat], lon=lons[i_lon], method='nearest')
-
-    for m in months:
-        values_prcp = []
-        values_temp = []
-
-        for y in years:
-            sel = cell.sel(time=(cell['time.year'] == y) & (cell['time.month'] == m))
-            if sel.sizes['time'] == 0:
-                values_prcp.append(np.nan)
-                values_temp.append(np.nan)
-                continue
-            values_prcp.append(float(sel.prcp.values))
-            values_temp.append(float(sel.tmean.values))
-
-        prcp_arr = np.array(values_prcp)
-        temp_arr = np.array(values_temp)
-        valid_mask = ~(np.isnan(prcp_arr) | np.isnan(temp_arr))
-
-        if valid_mask.sum() < 10: continue
-        spi_full = standardized_index(prcp_arr)
-        sti_full = standardized_index(temp_arr)
-
-        p_dry_hot = joint_prob_dry_and_hot(spi_full, sti_full)
-        scei_full = scei_from_prob(p_dry_hot)
-
-        valid_years_idx = np.where(valid_mask)[0]
+def process_cell(i_lat, i_lon):
+    cell = monthly_ds.sel(lat=lats[i_lat], lon=lons[i_lon], method='nearest')[['prcp', 'tmean']]
+    result = np.full((75, 12, 5), np.nan)    
+    for month in range(1, 13):
+        month_data = cell.where(cell.time.dt.month == month, drop=True)
+        if len(month_data.time) == 0: continue
+            
+        prcp = np.array([x.item() if hasattr(x, 'item') else x for x in month_data.prcp.values])
+        temp = np.array([x.item() if hasattr(x, 'item') else x for x in month_data.tmean.values])
         
-        data_dict['prcp'][valid_years_idx, m-1, i_lat, i_lon] = prcp_arr[valid_mask]
-        data_dict['tmean'][valid_years_idx, m-1, i_lat, i_lon] = temp_arr[valid_mask]
-        data_dict['spi'][valid_years_idx, m-1, i_lat, i_lon] = spi_full[valid_mask]
-        data_dict['sti'][valid_years_idx, m-1, i_lat, i_lon] = sti_full[valid_mask]
-        data_dict['scei'][valid_years_idx, m-1, i_lat, i_lon] = scei_full[valid_mask]
+        years_in_data = month_data.time.dt.year.values
+        year_indices = years_in_data - 1951
+        
+        if len(prcp) < 10 or np.isnan(prcp).all(): continue
+        scei_values = compute_scei_for_month(prcp, temp)
+        
+        valid_years = year_indices[~np.isnan(scei_values)]
+        valid_scei = scei_values[~np.isnan(scei_values)]
+        
+        if len(valid_years) == 0: continue
+        result[valid_years, month-1, 0] = prcp[~np.isnan(scei_values)]
+        result[valid_years, month-1, 1] = temp[~np.isnan(scei_values)]
+        result[valid_years, month-1, 2] = standardize(prcp)[~np.isnan(scei_values)]
+        result[valid_years, month-1, 3] = standardize(temp)[~np.isnan(scei_values)]
+        result[valid_years, month-1, 4] = valid_scei
+    
+    return i_lat, i_lon, result
 
-ds_scei_monthly = xr.Dataset(
-    {k: (['year', 'month', 'lat', 'lon'], v) for k, v in data_dict.items()},
-    coords={'year': years, 'month': months, 'lat': lats, 'lon': lons}
-)
+if __name__ == '__main__':
+    monthly_ds = xr.open_dataset("../dataset/monthly_ca_1951_2025.nc").load()
+    warm_da = xr.open_dataarray("../dataset/warm_seasons_ca.nc")
+    
+    mask = ~np.isnan(warm_da).any(dim='window')
+    lat_idx, lon_idx = np.where(mask)
+    lats = monthly_ds.lat.values
+    lons = monthly_ds.lon.values
+        
+    results = Parallel(n_jobs=-1, backend='loky', verbose=0)(
+        delayed(process_cell)(i, j) for i, j in tqdm(zip(lat_idx, lon_idx), total=len(lat_idx), desc="SCEI")
+    )
+    
+    ny, nm, nlats, nlons = 75, 12, len(lats), len(lons)
+    final = {var: np.full((ny, nm, nlats, nlons), np.nan) for var in ['prcp','tmean','spi','sti','scei']}
+    
+    for i_lat, i_lon, arr in results:
+        for v in range(5):
+            varname = ['prcp','tmean','spi','sti','scei'][v]
+            final[varname][:,:,i_lat,i_lon] = arr[:,:,v]
+    
+    ds = xr.Dataset(
+        {k: (['year','month','lat','lon'], v) for k, v in final.items()},
+        coords={
+            'year': range(1951, 2026),
+            'month': range(1, 13),
+            'lat': lats,
+            'lon': lons
+        }
+    )
 
-
-ds_scei_monthly.to_netcdf("../dataset/ca_scei_monthly_1951_2025.nc")
+    output_file = "../dataset/ca_scei_monthly_1951_2025.nc"
+    ds.to_netcdf(output_file, encoding={v: {"zlib": True, "complevel": 5} for v in ds})
