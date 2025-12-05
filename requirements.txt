@@ -17,6 +17,7 @@ fonttools==4.60.1
 fsspec==2025.10.0
 geopandas==1.1.1
 idna==3.11
+joblib==1.5.2
 kiwisolver==1.4.9
 locket==1.0.0
 matplotlib==3.10.7
